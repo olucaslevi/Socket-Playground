@@ -1,57 +1,56 @@
+const http = require('http');
 const express = require('express');
 const socket = require("socket.io");
 const app = express();
-const connection = require('./Database/database');
-const cors = require('cors');
+const PORT = process.env.PORT || 3000;
+const randomColor = require('randomcolor');
 
-// socket.io issues
+app.use(express.static(`${__dirname}/../client`));
+// socket.io setup
+const server = http.createServer(app);
+const io = socket(server);
 
-const PORT = 5000;
-const server = app.listen(PORT, function () {
-    console.log(`Listening on port ${PORT}`);
-    console.log(`http://localhost:${PORT}`);
+let players = []; // * list of online players
+
+// Server setup
+io.on("connection", (socket) => {
+    console.log("New client connected", socket.id);
+    const color = randomColor();
+    socket.on("login", (user,position) => {
+        players.push({ id: socket.id, user, color, position});
+        socket.username = user;
+        socket.color = color;
+        console.log(players);
+        socket.broadcast.emit("newPlayer", { id: socket.id, user, color, position});
+    });
+    // console.log("initial transport", socket.conn.transport.name); // prints "polling"
+    socket.conn.once("upgrade", () => {
+      // called when the transport is upgraded (i.e. from HTTP long-polling to WebSocket)
+      console.log("upgraded transport", socket.conn.transport.name); // prints "websocket"
+    });
+  
+  
+    socket.conn.on("close", (reason) => {
+        // called when the connection is closed
+        console.log("close", reason);
+
+    });
+    socket.on('message', (text,autor) => {
+        autor = socket.username;
+        io.emit('message', text,autor,color);
+    });
+    socket.on('disconnect', () => {
+        socket.emit('message',`Socket disconnected: ${socket.id}`);
+        players.splice(players.indexOf(socket.id), 1);
+        console.log(players);
+    });
   });
 
 
-const io = socket(server);
+server.on('error', (err) => {
+    console.error(err);
+  });
 
-io.on("connection", (socket) => { 
-    /* BLOCO DE CODIGOS  */
-    console.log("Socket.io connected", socket.id);
-}); 
-
-
-const userController = require('./Components/users/userController');
-
-// Database
-/// db authentication
-connection
-    .authenticate()
-    .then(()=>{
-        console.log('Comunicando com o banco de dados com sucesso !')
-}).catch((err)=>{
-    console.log("Erro encontrado: ", err);
-})
-
-///
-app.use(cors());
-app.use(express.json()); // * Para que o express entenda o formato json
-///
-
-
-// conjuntos de rotas
-app.use("/", userController);
-
-// Rota principal
-app.get('/',(req,res)=>{
-    res.send('Hello World !');
-})
-// Rota de teste
-app.post('/teste',(req,res)=>{
-    const name = req.body.name;
-    const email = req.body.email;
-    console.log(req.body);
-
-})
-
-
+server.listen(PORT, () => {
+    console.log('server is ready at http://localhost:3000');
+  });
