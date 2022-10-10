@@ -205,7 +205,7 @@ function game_loop(socket) {
             ctx.moveTo(0,y);
             ctx.lineTo(canvas.width,y);
         }
-        ctx.stroke();
+        // ctx.stroke();
         
     };
     
