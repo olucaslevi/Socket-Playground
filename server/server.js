@@ -15,42 +15,46 @@ let players = []; // * list of online players
 // Server setup
 io.on("connection", (socket) => {
     const color = randomColor();
-    // game: joining
-    socket.on("join", (data) => {
-      users.push(data); // add the new player to the list of players
-      io.sockets.emit("join", data); // send the new player to all the other players
-    });
 
     socket.on("joined", () => {
-      socket.emit("joined", users);
+      socket.emit("joined", players);
     });
-    
-    socket.on("login", (user,position) => {
-        players.push({ id: socket.id, user, color, position});
-        socket.username = user;
-        socket.color = color;
-        console.log(players);
-        socket.emit("message", `${user} has joined the chat`);
-        socket.emit("newPlayer", players);
+
+    socket.on("join", (data)=>{
+        players.push(data);
+        io.sockets.emit("join", data);
+    });
+
+    socket.on("update", (data) => {
+        players.forEach((player) => {
+            if (player.id === data.id) {
+                player.pos = data.pos;
+            }
+        });
+        io.sockets.emit("update", data); // * send player data to all players including the one who sent it
+    });
         
-    });
-    // console.log("initial transport", socket.conn.transport.name); // prints "polling"
-    socket.conn.once("upgrade", () => {
-      // called when the transport is upgraded (i.e. from HTTP long-polling to WebSocket)
-    });
-  
+    
   
     socket.conn.on("close", (reason) => {
-
+      players.slice(players.indexOf(socket.id), 1); // * remove player from list
+      io.sockets.emit("leave", socket.id);
+      socket.broadcast.emit("message", `${socket.name} has left the chat by ${reason}`);
     });
+
     socket.on('message', (text,autor) => {
         autor = socket.username;
         io.emit('message', text,autor,color);
     });
     
-    socket.on('disconnect', () => {
+
+    socket.on("disconnect", (currentPlayer) => {
         socket.emit('message',`Socket disconnected: ${socket.id}`);
+        socket.broadcast.emit('message',`Socket disconnected: ${socket.id}`);
         players.splice(players.indexOf(socket.id), 1);
+        socket.emit("lefted",currentPlayer);
+        io.sockets.emit("message", `${socket.username} has left the chat`);
+        io.sockets.emit("lefted",currentPlayer);
     });
   });
 
