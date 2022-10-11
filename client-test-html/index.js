@@ -12,12 +12,8 @@ const log = (text,autor,color) =>{  // This function will be modified to do not 
     const parent = document.getElementById("chat-list");
     const el = document.createElement('li'); // Create a <li> node num <ul>
     // ! se o chat login tivesse On
-    // if (autor == undefined){
-    //     el.innerHTML = `<span style='color: #000000'>${text}</span>`;
-    // }else{
-    //     el.innerHTML = `<span style='color: ${color}'>${autor}</span>: ${text}`;
-    // }
-    el.innerHTML = `<span style='color: ${color}'>Player</span> ${text}`;
+
+    el.innerHTML = `<span style='color: ${color}'>${autor}</span> ${text}`;
     parent.appendChild(el); // appends the <li> node to the <ul> node
     parent.scrollTop = parent.scrollHeight; // scrolls the chat box to the bottom
 };
@@ -41,8 +37,8 @@ const onChatLeave = (socket) =>{
 
 // Login click event
 const onLogin = (socket) => { // ok
-    const username = document.getElementById("username").value;
-    socket.emit("login",username); // init login
+    const username = document.getElementById("username").value; //"Teste"
+    socket.emit("chatLogin", username); // init login
 };
 
 (() => {

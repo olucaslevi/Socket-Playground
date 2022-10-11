@@ -24,7 +24,7 @@ io.on("connection", (socket) => {
         players.push(data);
         io.sockets.emit("join", data);
     });
-
+    
     socket.on("update", (data) => {
         players.forEach((player) => {
             if (player.id === data.id) {
@@ -46,7 +46,11 @@ io.on("connection", (socket) => {
         autor = socket.username;
         io.emit('message', text,autor,color);
     });
-    
+    socket.on("chatLogin", (username) => {
+        socket.username = username;
+        socket.emit("message", `You have joined the chat as ${username}`);
+        socket.broadcast.emit("message", `${username} has joined the chat`);
+    }); 
 
     socket.on("disconnect", (currentPlayer) => {
         socket.emit('message',`Socket disconnected: ${socket.id}`);
