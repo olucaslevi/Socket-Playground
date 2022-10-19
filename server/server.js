@@ -24,8 +24,21 @@ io.on("connection", (socket) => {
         players.push(data);
         io.sockets.emit("join", data);
     });
-    
+
+
+    socket.on("login", (data) => {
+      // TEST IF THE USERNAME IS ALREADY TAKEN
+      players.forEach((player) => {
+        if (player.name === data.name) {
+          console.log("Username already taken");
+        }else{
+          socket.emit("login", data);
+        }
+      });
+    });
+
     socket.on("update", (data) => {
+      console.log(players);
         players.forEach((player) => {
             if (player.id === data.id) {
                 player.pos = data.pos;
@@ -33,7 +46,7 @@ io.on("connection", (socket) => {
         });
         io.sockets.emit("update", data); // * send player data to all players including the one who sent it
     });
-        
+    
     
   
     socket.conn.on("close", (reason) => {
@@ -46,11 +59,7 @@ io.on("connection", (socket) => {
         autor = socket.username;
         io.emit('message', text,autor,color);
     });
-    socket.on("chatLogin", (username) => {
-        socket.username = username;
-        socket.emit("message", `You have joined the chat as ${username}`);
-        socket.broadcast.emit("message", `${username} has joined the chat`);
-    }); 
+    
 
     socket.on("disconnect", (currentPlayer) => {
         socket.emit('message',`Socket disconnected: ${socket.id}`);

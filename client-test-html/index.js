@@ -7,12 +7,18 @@ sprite.src = "./assets/character2.png";
 const map = new Image();
 map.src = "./assets/map.png"; // load img ok
 
+
 const log = (text,autor,color) =>{  // This function will be modified to do not use console.log but to use the chat box
     // document.getElementById("usernameError").innerHTML = `<span style='${color}'>**Message</span>`;
+
     const parent = document.getElementById("chat-list");
     const el = document.createElement('li'); // Create a <li> node num <ul>
     // ! se o chat login tivesse On
-
+    // if (autor == undefined){
+    //     el.innerHTML = `<span style='color: #000000'>${text}</span>`;
+    // }else{
+    //     el.innerHTML = `<span style='color: ${color}'>${autor}</span>: ${text}`;
+    // }
     el.innerHTML = `<span style='color: ${color}'>${autor}</span> ${text}`;
     parent.appendChild(el); // appends the <li> node to the <ul> node
     parent.scrollTop = parent.scrollHeight; // scrolls the chat box to the bottom
@@ -21,25 +27,23 @@ const log = (text,autor,color) =>{  // This function will be modified to do not 
 const onChatSubmit = (socket) =>{
     const input = document.getElementById("chat");
     const text = input.value;
-    input.value = '';
-    socket.emit('message', text);
+    const autor = currentPlayer.name;
+    socket.emit('message', text,autor);
 };
 const onChatLeave = (socket) =>{
     log('You left the chat');
-    socket.disconnect();
     socket.emit("disconnect",currentPlayer);
     // tirar player da lista players
     players.slice(players.indexOf(currentPlayer),1);
-    currentPlayer = undefined;
+    socket.disconnect();
 };
 
 
 
-// Login click event
-const onLogin = (socket) => { // ok
-    const username = document.getElementById("username").value; //"Teste"
-    socket.emit("chatLogin", username); // init login
-};
+// ! // Login click event
+// const onLogin = (socket) => { // ok
+//     const username = document.getElementById("username").value;
+// };
 
 (() => {
     
@@ -50,6 +54,13 @@ const onLogin = (socket) => { // ok
         log('You are connected');
         game_loop(socket);
         socket.emit("joined"); // ? instancia joined qdo o jogo inicia
+    });
+    socket.on('disconnect', () => log('You have been disconnected.'));
+    socket.on('reconnect', () => log('You have been reconnected.'));
+    socket.on('reconnect_error', () => log('Attempt to reconnect has failed.'));
+    socket.on('login', (name) => {
+        currentPlayer.name = name;
+        log(`You have logged in as ${name}`);
     });
 
     socket.on("update", (data) => {
@@ -171,7 +182,8 @@ class Player {
                 break;
         }
     }
-}
+};
+
 
 
 function game_loop(socket) {
@@ -284,7 +296,7 @@ function game_loop(socket) {
     //////////////////////
 
     function update() {
-        console.log(map.src);
+        console.log(players);
         reset_screen();
         currentPlayer.updatePosition();
         currentPlayer.draw(ctx, GRIDSIZE);
