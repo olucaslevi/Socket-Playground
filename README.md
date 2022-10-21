@@ -1,4 +1,8 @@
-#
+# Socket Playground Game:
+
+This is a game created with Socket.io whose idea is to be a prototype of an MMORPG where players can interact with the map or with each other through chat.
+
+##
 Socket Game new update releases:
 1. Login fixed bugs and display name on Chat and Canvas
 2. Without verify inputs
