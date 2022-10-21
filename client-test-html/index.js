@@ -19,7 +19,7 @@ const log = (text,autor,color) =>{  // This function will be modified to do not 
     // }else{
     //     el.innerHTML = `<span style='color: ${color}'>${autor}</span>: ${text}`;
     // }
-    el.innerHTML = `<span style='color: ${color}'>${autor}</span> ${text}`;
+    el.innerHTML = `<span style='color: ${color}'>${autor}: </span> ${text}`;
     parent.appendChild(el); // appends the <li> node to the <ul> node
     parent.scrollTop = parent.scrollHeight; // scrolls the chat box to the bottom
 };
@@ -29,6 +29,7 @@ const onChatSubmit = (socket) =>{
     const text = input.value;
     const autor = currentPlayer.name;
     socket.emit('message', text,autor);
+    input.value = "";
 };
 const onChatLeave = (socket) =>{
     log('You left the chat');
@@ -40,10 +41,6 @@ const onChatLeave = (socket) =>{
 
 
 
-// ! // Login click event
-// const onLogin = (socket) => { // ok
-//     const username = document.getElementById("username").value;
-// };
 
 (() => {
     
@@ -51,16 +48,17 @@ const onChatLeave = (socket) =>{
 
     socket.on('message', log);
     socket.on('connect', () => {
-        log('You are connected');
-        game_loop(socket);
-        socket.emit("joined"); // ? instancia joined qdo o jogo inicia
     });
     socket.on('disconnect', () => log('You have been disconnected.'));
     socket.on('reconnect', () => log('You have been reconnected.'));
     socket.on('reconnect_error', () => log('Attempt to reconnect has failed.'));
-    socket.on('login', (name) => {
-        currentPlayer.name = name;
-        log(`You have logged in as ${name}`);
+    socket.on('login', (name,color) => {
+        let currentPlayer = new Player(socket.id, name, "testeImg",color, {x: 2, y: 2}, {x: 0, y: 0});
+        game_loop(socket,currentPlayer);
+        socket.emit("joined"); // ? instancia joined qdo o jogo inicia
+        // let chat visible
+        document.getElementById("chat-div").style.visibility = "visible";
+        document.getElementById("div-login").style.visibility = "hidden";
     });
 
     socket.on("update", (data) => {
@@ -76,9 +74,21 @@ const onChatLeave = (socket) =>{
             }
         }
     });
-    
+    // ! // Login click event
+    const onLogin = (socket) => {
+        if (document.getElementById("username").value == "" || document.getElementById("username").value == null || document.getElementById("username").value == undefined){
+            document.getElementById("usernameError").innerHTML = "<span style='color: red'>**Username not valid !! Try Again</span>";
+        }
+        else{    
+            const username = document.getElementById("username").value;
+            let input = document.getElementById("username");
+            input.value = "";
+            socket.emit("login", username);
+        }
+    };
+
     socket.on("join",(data)=>{ // ?  join é o evento que o servidor envia para o cliente quando um novo jogador se conecta
-        players.push( new Player(data.id, data.name,"imgTest",data.pos));
+        players.push( new Player(data.id, data.name, data.color ,"imgTest",data.pos));
         
         // add no list do front-end.
     });
@@ -114,8 +124,6 @@ const onChatLeave = (socket) =>{
 
 
 const BACKGROUND_COLOUR = '#231F20';
-const SNAKE_COLOUR = '#C2C2C2';
-const FOOD_COLOUR = '#E66916';
 
 const gameScreen = document.getElementById("gameScreen");
 
@@ -128,10 +136,11 @@ const GRIDSIZE = 32;
 
 class Player {
     // socket.id , username, 
-    constructor(id, name, img){
+    constructor(id, name, img, color){
         this.id = id;
         this.name = name;
         this.img = img;
+        this.color = color;
         this.pos = {x: 10, y: 12};
         this.vel = {x: 0, y: 0};
     }
@@ -186,7 +195,7 @@ class Player {
 
 
 
-function game_loop(socket) {
+function game_loop(socket,currentPlayer) {
     
     // * canvas
     const canvas = document.getElementById("canvas"); 
@@ -230,9 +239,6 @@ function game_loop(socket) {
 
     drawGrid(GRIDSIZE);
     
-    // * player 
-    let currentPlayer = new Player(socket.id, "teste", "testeImg", {x: 2, y: 2}, {x: 0, y: 0});
-    // ! entrou no jogo
     socket.emit("join", currentPlayer);
 
 
@@ -285,6 +291,16 @@ function game_loop(socket) {
 
     function drawPlayers(players){
         players.forEach((player) => {
+            // draw names with color
+            ctx.fillStyle = player.color;
+            ctx.font = "14px Tahoma";
+            // center text
+            ctx.textAlign = "center";
+            // stroke text
+            ctx.strokeText(player.name, player.pos.x * GRIDSIZE + 16, player.pos.y * GRIDSIZE - 10);
+            ctx.fillText(player.name, player.pos.x * GRIDSIZE + GRIDSIZE/2, player.pos.y * GRIDSIZE - 10);
+            
+            // draw player
             ctx.drawImage(sprite, player.pos.x * GRIDSIZE, player.pos.y * GRIDSIZE - 10, 32,48);
         });
     }
@@ -296,7 +312,6 @@ function game_loop(socket) {
     //////////////////////
 
     function update() {
-        console.log(players);
         reset_screen();
         currentPlayer.updatePosition();
         currentPlayer.draw(ctx, GRIDSIZE);

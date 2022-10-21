@@ -26,15 +26,8 @@ io.on("connection", (socket) => {
     });
 
 
-    socket.on("login", (data) => {
-      // TEST IF THE USERNAME IS ALREADY TAKEN
-      players.forEach((player) => {
-        if (player.name === data.name) {
-          console.log("Username already taken");
-        }else{
-          socket.emit("login", data);
-        }
-      });
+    socket.on("login", (usernameClient) => {
+        socket.emit("login", usernameClient,color);
     });
 
     socket.on("update", (data) => {
@@ -56,7 +49,6 @@ io.on("connection", (socket) => {
     });
 
     socket.on('message', (text,autor) => {
-        autor = socket.username;
         io.emit('message', text,autor,color);
     });
     

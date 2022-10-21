@@ -11,13 +11,15 @@
     <section>
         <div id="main">
             <h1>Chat Game:</h1>
-            <h2>Login:</h2><input type="text" id="username" autocomplete="off" maxlength="10" value="Teste" />
-            <button id="btnLogin">Login</button>
+            <div id="div-login" style="visibility: Visible"><h2>Login:</h2><input type="text" id="username" autocomplete="off" maxlength="8" placeholder="Username"/>
+            <button id="btnLogin">Login</button></div>
+            
+            <span id="usernameError"></span>
             <div id="gameScreen">
                 <div>
                     <canvas id="canvas"></canvas>
                 </div>
-                <div id="chat-div">
+                <div id="chat-div" style="visibility: hidden">
                     <ul id="chat-list"></ul>
                     <form id="chat-form">
                         <input type="text" id="chat" autocomplete="off"/>
