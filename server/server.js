@@ -15,7 +15,9 @@ let players = []; // * list of online players
 // Server setup
 io.on("connection", (socket) => {
     const color = randomColor();
-
+    socket.on('ping', () => {
+        socket.emit('pong');
+    });
     socket.on("joined", () => {
       socket.emit("joined", players);
     });
