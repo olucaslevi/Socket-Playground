@@ -17,30 +17,31 @@ io.on("connection", (socket) => {
     const color = randomColor();
     socket.on('ping', () => {
         socket.emit('pong');
+        console.log('pingou');
     });
-    socket.on("joined", () => {
-      socket.emit("joined", players);
-    });
+    // socket.on("joined", () => {
+    //   socket.emit("joined", players);
+    // });
 
-    socket.on("join", (data)=>{
-        players.push(data);
-        io.sockets.emit("join", data);
-    });
+    // socket.on("join", (data)=>{
+    //     players.push(data);
+    //     io.sockets.emit("join", data);
+    // });
 
 
-    socket.on("login", (usernameClient) => {
-        socket.emit("login", usernameClient,color);
-    });
+    // socket.on("login", (usernameClient) => {
+    //     socket.emit("login", usernameClient,color);
+    // });
 
-    socket.on("update", (data) => {
-      console.log(players);
-        players.forEach((player) => {
-            if (player.id === data.id) {
-                player.pos = data.pos;
-            }
-        });
-        io.sockets.emit("update", data); // * send player data to all players including the one who sent it
-    });
+    // socket.on("update", (data) => {
+    //   console.log(players);
+    //     players.forEach((player) => {
+    //         if (player.id === data.id) {
+    //             player.pos = data.pos;
+    //         }
+    //     });
+    //     io.sockets.emit("update", data); // * send player data to all players including the one who sent it
+    // });
     
     
   
