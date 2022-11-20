@@ -6,7 +6,7 @@ class Player {
         this.name = name;
         this.img = img;
         this.color = color;
-        this.pos = {x: 10, y: 3};
+        this.pos = {x: 10, y: 2};
         this.vel = {x: 0, y: 0};
     }
     draw(context){
@@ -18,7 +18,7 @@ class Player {
         // send the player position to the server
         this.pos.x += this.vel.x;
         this.pos.y += this.vel.y;
-
+        console.log('Posiçao:',this.pos.x,this.pos.y);
         // collision with walls
         
         if(this.pos.x < 0){ 

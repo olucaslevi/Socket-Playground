@@ -9,7 +9,8 @@ import Player from './../reactApp/src/Components/player.js';
 // import chat.js
 import {log,onChatSubmit,onChatLeave} from "./src/Components/chat.js";
 const BACKGROUND_COLOUR = "black";
-
+const CONTEXT_WIDTH = 832;
+const CONTEXT_HEIGHT = 576;
 const socket = io.connect("http://localhost:3000");
 
 const GRIDSIZE = 32;
@@ -39,7 +40,6 @@ export function App() {
       socket.on('message', log);
       socket.on('connect', () => {
          log('You have connected to the chat');
-         socketPlayer = new Player(socket.id, "Player", "https://i.imgur.com/4Z0Z1XW.png", "blue");
       });
       socket.on('disconnect', () => {
          log('You have been disconnected');
@@ -69,10 +69,9 @@ export function App() {
 
    const game_loop = (context , currentPlayer) => {
       
-      currentPlayer = new Player(socket.id, "Player", "https://i.imgur.com/4Z0Z1XW.png", "yellow");
-      currentPlayer.draw(context);
-
-      currentPlayer.move("Up");
+      if (!currentPlayer) {
+         currentPlayer = new Player(socket.id, "Player", "https://i.imgur.com/4Z0Z1XW.png", "yellow");
+      }
 
       context.width = 832;
       context.height = 576;
@@ -95,51 +94,88 @@ export function App() {
       context.fillStyle = "white";
       context.font = "bold 20px Arial";
       context.fillText("FPS: " + fps_rate, 20, 40);
-      
-      const drawGrid = (size) => {
-         context.beginPath();
-         for (let x = 0; x < context.width; x += size){
-            context.moveTo(x,0);
-            context.lineTo(x,context.height);
-         }
-         for (let y = 0; y < context.height; y += size){
-            context.moveTo(0,y);
-            context.lineTo(context.width,y);
-         }
-         context.stroke()
 
-      };
-
-      const clear_screen = () => {
-         context.fillStyle = 'red';
-         context.fillRect(0,0,context.width, context.height);
-      };
-      const reset_screen = () => {
-         clear_screen();
-      };
-      // const drawPlayer = () => {
-      //    context.fillStyle = "red";
-      //    context.fillRect(currentPlayer.pos.x * GRIDSIZE, currentPlayer.pos.y * GRIDSIZE, GRIDSIZE, GRIDSIZE);
-      // };
-
-      context.fillStyle = "green";
+      // ? pinta um negocio
+      context.fillStyle = "PINK";
       context.fillRect(i*32,64,320,32);
       if (i < 25) {
          i++;
       }else if (i == 25) {
          i = 0;
       }
+      // wasd movements
+      (()=>{
+         document.addEventListener('keydown', (event) => {
+            const keyName = event.key;
+            if (keyName == "w") {
+               currentPlayer.vel. y = -1;
+            }else if (keyName == "a") {
+               currentPlayer.vel.x = -1;
+            }else if (keyName == "s") {
+               currentPlayer.vel.y = 1;
+            }else if (keyName == "d") {
+               currentPlayer.vel.x = 1;
+            }
+         });
+         document.addEventListener('keyup', (event) => {
+            const keyName = event.key;
+            if (keyName == "w") {
+               currentPlayer.vel.y = 0;
+            }else if (keyName == "a") {
+               currentPlayer.vel.x = 0;
+            }else if (keyName == "s") {
+               currentPlayer.vel.y = 0;
+            }else if (keyName == "d") {
+               currentPlayer.vel.x = 0;
+            }
+         });
+      })();
+      // draw grid with coordinates
+      (()=>{
+         context.strokeStyle = "white";
+         context.lineWidth = 1;
+         for (let i = 0; i < 832; i += GRIDSIZE) {
+            context.beginPath();
+            context.moveTo(i,0);
+            context.lineTo(i,576);
+            context.stroke();
+         }
+         for (let i = 0; i < 576; i += GRIDSIZE) {
+            context.beginPath();
+            context.moveTo(0,i);
+            context.lineTo(832,i);
+            context.stroke();
+         }
+      })();
+      // draw coordenate numbers
+      (()=>{
+         context.fillStyle = "white";
+         context.font = "bold 10px Arial";
+         for (let i = 0; i < 832; i += GRIDSIZE) {
+            for (let j = 0; j < 576; j += GRIDSIZE) {
+               context.fillText(i/32 + "," + j/32, i + 5, j + 15);
+            }
+         }
+
+      })();
+
+
+      currentPlayer.draw(context);
       ////////// !  U P D A T E ///////////////
       const update = () => {
-         currentPlayer.updatePosition();
-         currentPlayer.draw(context, GRIDSIZE);
-         console.log(currentPlayer,':',currentPlayer.pos.x,currentPlayer.pos.y);
+         if (currentPlayer) {
+            if (currentPlayer.vel.x != 0 || currentPlayer.vel.y != 0) {
+               currentPlayer.updatePosition();
+               currentPlayer.draw(context);
+            }
+         }
 
       };
       update();
 
       setTimeout(() => {
          requestAnimationFrame(() => game_loop(context, currentPlayer));
+         
       }, 1000 / 60);
 
    };
