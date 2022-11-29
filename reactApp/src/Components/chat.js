@@ -8,19 +8,5 @@ const log = (text,autor,color) =>{  // This function will be modified to do not 
     parent.appendChild(el); // appends the <li> node to the <ul> node
     parent.scrollTop = parent.scrollHeight; // scrolls the chat box to the bottom
 };
-const onChatSubmit = (socket) =>{
-    const input = document.getElementById("chat");
-    const text = input.value;
-    const autor = "Teste";
-    socket.emit('message', text,autor);
-    input.value = "";
-};
-const onChatLeave = (socket) =>{
-    log('You left the chat');
-    // socket.emit("disconnect",currentPlayer);
-    // // tirar player da lista players
-    // players.slice(players.indexOf(currentPlayer),1);
-    socket.disconnect();
-};
 
-export {log,onChatSubmit,onChatLeave};
+export {log};

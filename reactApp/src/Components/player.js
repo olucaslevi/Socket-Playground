@@ -1,62 +1,38 @@
 
 class Player {
     // socket.id , username, 
-    constructor(id, name, img, color){
+    constructor(id, username, position) {
         this.id = id;
-        this.name = name;
-        this.img = img;
-        this.color = color;
-        this.pos = {x: 10, y: 2};
-        this.vel = {x: 0, y: 0};
+        this.username = username;
+        this.position = position;
+        this.velocity = (0, 0, 0);
     }
-    draw(context){
-        context.fillStyle = this.color;
-        context.fillRect(this.pos.x * 32, this.pos.y * 32, 32, 32);
+    // draw player model
+    drawPlayer() {
+        // draw player model
     }
-
-    updatePosition(){ // This function will be modified to update the player position
-        // send the player position to the server
-        this.pos.x += this.vel.x;
-        this.pos.y += this.vel.y;
-        console.log('Posiçao:',this.pos.x,this.pos.y);
-        // collision with walls
-        
-        if(this.pos.x < 0){ 
-            this.pos.x = 0;
-        }
-        if(this.pos.x > 25){
-            this.pos.x = 25;
-        }
-        if(this.pos.y < 0){
-            this.pos.y = 0;
-        }
-        if(this.pos.y > 17){
-            this.pos.y = 17;
-        }
-        
-
+    // update player model
+    update() {
+        // update player position
+        this.position.x = playerBody.position.x;
+        this.position.y = playerBody.position.y;
+        this.position.z = playerBody.position.z;
     }
-    move(dir){
-        switch(dir){
-            case 'Up':
-                console.log('Up');
-                this.vel.x = 0;
-                this.vel.y = -1;
+    move(direction) {
+        direction = direction.toLowerCase();
+        // move player in direction
+        switch (direction) {
+            case "forward":
+                playerBody.velocity.z = 10;
                 break;
-            case 'Down':
-                console.log('Down');
-                this.vel.x = 0;
-                this.vel.y = 1;
+            case "backward":
+                playerBody.velocity.z = -10;
                 break;
-            case 'Left':
-                console.log('Left');
-                this.vel.x = -1;
-                this.vel.y = 0;
+            case "left":
+                playerBody.velocity.x = -10;
                 break;
-            case 'Right':
-                console.log('Right');
-                this.vel.x = 1;
-                this.vel.y = 0;
+            case "right":
+                playerBody.velocity.x = 10;
                 break;
         }
     }

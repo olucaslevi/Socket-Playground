@@ -1,208 +1,299 @@
 import React, { Component } from 'react';
 import io from 'socket.io-client';
 import { useState,useEffect, useRef } from 'react';
-
-import Canvas from './../reactApp/src/Components/canvas.js';
+// importin three
+import * as THREE from 'three';
+// importing cannon to physics
+import * as CANNON from 'cannon-es';
+import CannonDebugger from 'cannon-es-debugger';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import Stats from 'three/examples/jsm/libs/stats.module.js';
 
 // importing class player
-import Player from './../reactApp/src/Components/player.js';
+import Player from './src/Components/player.js';
 // import chat.js
-import {log,onChatSubmit,onChatLeave} from "./src/Components/chat.js";
-const BACKGROUND_COLOUR = "black";
-const CONTEXT_WIDTH = 832;
-const CONTEXT_HEIGHT = 576;
+import { World } from 'cannon-es';
+
 const socket = io.connect("http://localhost:3000");
 
-const GRIDSIZE = 32;
 let currentPlayer;
 
-// ! time stuff
 
-const fps = 60;
-const cycleDelay = Math.floor(1000/fps); // * 1000ms / 60fps = 16.666666666666668ms
-var startTime = 0;
-var oldCycleTime = 0
-var cycleCount = 0;
-var fps_rate = "carregando...";
-
-var i = 0;
-
-// const game_loop = (context, player) => {
-//    player = new Player(0, "Player", "https://i.imgur.com/4Z0Z1XW.png", "red");
-//    console.log(context,player);
-//    context.fillStyle = BACKGROUND_COLOUR;
-//    context.fillRect(0, 0, 832,576);
-//  };
 export function App() {
+   const [name, setName] = useState("");
+   const [user, setUser] = useState(null);
+   const [message, setMessage] = useState("");
+   const [messages, setMessages] = useState([]);
+   const [players, setPlayers] = useState([]);
 
-   // Chat Stuff import
-   (()=>{
-      socket.on('message', log);
-      socket.on('connect', () => {
-         log('You have connected to the chat');
-      });
-      socket.on('disconnect', () => {
-         log('You have been disconnected');
-      });
-      socket.on('reconnect', () => {
-         log('You have reconnected to the chat');
-      });
-      socket.on('reconnect_error', () => {
-         log('Attempt to reconnect has failed');
-      });
-      socket.on('pong', () => {
-         log('pongou');
-      });
-   })();
+   // ? Chatbox Stuff
+
+   function log (text,autor,color){
+      // document.getElementById("usernameError").innerHTML = `<span style='${color}'>**Message</span>`;
+      const parent = document.getElementById("chat-list");
+      const el = document.createElement('li'); // Create a <li> node num <ul>
+      el.innerHTML = `<span style='color: ${color}'>${autor}: </span> ${text}`;
+      parent.appendChild(el); // appends the <li> node to the <ul> node
+      parent.scrollTop = parent.scrollHeight; // scrolls the chat box to the bottom
+   }
+
 
    useEffect(() => {
-      document
-      .getElementById('chat-form')
-      .addEventListener('submit', (event) => {
-          event.preventDefault();
-          onChatSubmit(socket);       
+      const scene = new THREE.Scene(); /// creating scene
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      const renderer = new THREE.WebGLRenderer();
+
+      const physicsWorld = new CANNON.World({
+         gravity: new CANNON.Vec3(0, -10, 0),
+         frictionGravity: 0.5,
       });
-      return () => {
+
+      // Create a slippery material (friction coefficient = 0.0)
+      const physicsMaterial = new CANNON.Material('physics')
+      const physics_physics = new CANNON.ContactMaterial(physicsMaterial, physicsMaterial, {
+         friction: 0.0,
+         restitution: 0.3,
+      })
+      // We must add the contact materials to the world
+      physicsWorld.addContactMaterial(physics_physics)
+      const groundBody = new CANNON.Body({
+         mass: 0,
+         material: physicsMaterial,
+         shape: new CANNON.Plane(),
+         type: CANNON.Body.STATIC
+      });
+      groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2); // * rotate the ground
+      physicsWorld.addBody(groundBody);
+
+      socket.on('message', log);
+      
+      const cannonDebugger = new CannonDebugger(scene, physicsWorld);
+      
+      socket.on('playerExited', (name) => {
+         console.log(name + " saiu do jogo");
+      })
+
+      
+      // * adding grid to scene
+      scene.add( new THREE.GridHelper( 100, 100 ) );
+      // * adding light to scene
+      scene.add( new THREE.AmbientLight( 0x404040 ) );
+      // *size, intensity, distance, decay
+      renderer.setSize(window.innerWidth/1.3, window.innerHeight/1.3);
+      document.body.appendChild(renderer.domElement);
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.target.set(0, 10, 0);
+
+      // ? duck
+      let duck;
+      // ? load duck
+      const loader = new GLTFLoader();
+      loader.load(
+         'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF/Duck.gltf',
+         (gltf) => {
+            duck = gltf.scene;
+            duck.scale.set(2, 2, 2);
+            scene.add(duck);
+         },
+         undefined,
+         (error) => {
+            console.error(error);
+         }
+      );
+
+      socket.on("newPlayer", (player) => {
+         console.log(player.name + " entrou no jogo");
+         const newPlayer = new Player(player.name, player.id, player.x, player.y, player.z, player.color, physicsWorld, physicsMaterial);
+         setPlayers([...players, newPlayer]);
+      });
+      var playerShape = new CANNON.Box(new CANNON.Vec3(1,1,1));
+      var playerBody = new CANNON.Body({
+         mass: 1,
+         material: physicsMaterial,
+         shape: playerShape,
+         type: CANNON.Body.DYNAMIC
+      });
+      playerBody.position.set(0, 1, 0);
+      physicsWorld.addBody(playerBody);
+
+      // wasd 
+      document.addEventListener('keydown', (event) => {
+         const keyName = event.key;
+         if (keyName === 'w') {
+            playerBody.velocity.z = -10;
+         }
+         if (keyName === 's') {
+            playerBody.velocity.z = 10;
+         }
+         if (keyName === 'a') {
+            playerBody.velocity.x = -10;
+         }
+         if (keyName === 'd') {
+            playerBody.velocity.x = 10;
+         }
+      });
+      document.addEventListener('keyup', (event) => {
+         const keyName = event.key;
+         if (keyName === 'w') {
+            playerBody.velocity.z = 0;
+         }
+         if (keyName === 's') {
+            playerBody.velocity.z = 0;
+
+         }
+         if (keyName === 'a') {
+            playerBody.velocity.x = 0;
+         }
+         if (keyName === 'd') {
+            playerBody.velocity.x = 0;
+         }
+      });
+      
+
+      // ? light
+      const light2 = new THREE.DirectionalLight(0xffffff, 1);
+      light2.position.set(0, 1, 0);
+      scene.add(light2);
+
+      // ? Texture from ground plane
+      let planesize = 10;
+      // load a texture, set wrap mode to repeat
+      const texture = new THREE.TextureLoader().load( 'https://threejsfundamentals.org/threejs/resources/images/checker.png' );
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      const repeats = planesize/2;
+      // do not blur texture
+      texture.magFilter = THREE.NearestFilter;
+      texture.repeat.set( repeats, repeats );
+      
+      // ? Plane Ground
+      const planeGeometry = new THREE.PlaneGeometry(100, 100, 10, 10);
+      // soft green collor: 0x44aa88
+      const planeMaterial = new THREE.MeshBasicMaterial({map:texture, side: THREE.DoubleSide});
+      const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+      plane.receiveShadow = true;
+      plane.rotation.x = -0.5 * Math.PI;
+      plane.position.y = -0.5;
+      scene.add(plane);
+      
+      // ? set background soft blue: 0x44aaff
+      scene.background = new THREE.Color(0x44aaff);
+      
+      // ? draw FPS
+      const stats = new Stats();
+      document.body.appendChild(stats.dom);
+      
+      // * camera position
+      camera.position.z = 5;
+      camera.position.y = 5;
+      camera.position.x = 5;
+      // * camera rotation
+      camera.rotation.x = -0.5;
+      camera.rotation.y = 0.5;
+      camera.rotation.z = 0.5;
+      // * camera lookAt
+      camera.lookAt(0,0,0);
+      // * camera update
+      camera.updateProjectionMatrix();
+      
+      camera.position.z = 18;
+      camera. position.y = 10;
+      // camera rotation
+      camera.rotation.z = 50;
+
+      // show x,y,z lines in scene
+      const axesHelper = new THREE.AxesHelper( 50 );
+      scene.add( axesHelper );
+
+      const update = () => {
+         // * update camera
+         camera.updateProjectionMatrix();
+         // * update controls
+         controls.update();
+         // * update stats
+         stats.update();
+         // * update cannonDebugger
+         cannonDebugger.update();
+         // * update physicsWorld
+         physicsWorld.step(1/60);
+         // * update duck
+         if (duck) {
+            duck.position.copy(playerBody.position);
+            duck.quaternion.copy(playerBody.quaternion);
+         }
       };
-         
+      const animate = () => {
+         update();
+         physicsWorld.fixedStep();
+         requestAnimationFrame(animate);
+         renderer.render(scene, camera);
+         // // add duck to sphere
+         socket.emit('listRequest');
+         // update all players   
+      }
+      animate();
+
     }, []);
 
-   const game_loop = (context , currentPlayer) => {
-      
-      if (!currentPlayer) {
-         currentPlayer = new Player(socket.id, "Player", "https://i.imgur.com/4Z0Z1XW.png", "yellow");
-      }
 
-      context.width = 832;
-      context.height = 576;
-      // ! time stuff
-      cycleCount ++;
-      if (cycleCount > 60) {
-         cycleCount = 0;
-      }
-      var startTime = new Date().getTime();
-      var cycleTime = startTime - oldCycleTime;
-      oldCycleTime = startTime;
-      if (cycleCount % 60 == 0) {
-         fps_rate = Math.floor(1000/cycleTime);
-      }
-      // ? pinta o context de preto.
-      context.fillStyle = "black";
-      context.fillRect(0,0,832,576);
-
-      // draw fps in the top left corner
-      context.fillStyle = "white";
-      context.font = "bold 20px Arial";
-      context.fillText("FPS: " + fps_rate, 20, 40);
-
-      // ? pinta um negocio
-      context.fillStyle = "PINK";
-      context.fillRect(i*32,64,320,32);
-      if (i < 25) {
-         i++;
-      }else if (i == 25) {
-         i = 0;
-      }
-      // wasd movements
-      (()=>{
-         document.addEventListener('keydown', (event) => {
-            const keyName = event.key;
-            if (keyName == "w") {
-               currentPlayer.vel. y = -1;
-            }else if (keyName == "a") {
-               currentPlayer.vel.x = -1;
-            }else if (keyName == "s") {
-               currentPlayer.vel.y = 1;
-            }else if (keyName == "d") {
-               currentPlayer.vel.x = 1;
-            }
-         });
-         document.addEventListener('keyup', (event) => {
-            const keyName = event.key;
-            if (keyName == "w") {
-               currentPlayer.vel.y = 0;
-            }else if (keyName == "a") {
-               currentPlayer.vel.x = 0;
-            }else if (keyName == "s") {
-               currentPlayer.vel.y = 0;
-            }else if (keyName == "d") {
-               currentPlayer.vel.x = 0;
-            }
-         });
-      })();
-      // draw grid with coordinates
-      (()=>{
-         context.strokeStyle = "white";
-         context.lineWidth = 1;
-         for (let i = 0; i < 832; i += GRIDSIZE) {
-            context.beginPath();
-            context.moveTo(i,0);
-            context.lineTo(i,576);
-            context.stroke();
-         }
-         for (let i = 0; i < 576; i += GRIDSIZE) {
-            context.beginPath();
-            context.moveTo(0,i);
-            context.lineTo(832,i);
-            context.stroke();
-         }
-      })();
-      // draw coordenate numbers
-      (()=>{
-         context.fillStyle = "white";
-         context.font = "bold 10px Arial";
-         for (let i = 0; i < 832; i += GRIDSIZE) {
-            for (let j = 0; j < 576; j += GRIDSIZE) {
-               context.fillText(i/32 + "," + j/32, i + 5, j + 15);
-            }
-         }
-
-      })();
-
-
-      currentPlayer.draw(context);
-      ////////// !  U P D A T E ///////////////
-      const update = () => {
-         if (currentPlayer) {
-            if (currentPlayer.vel.x != 0 || currentPlayer.vel.y != 0) {
-               currentPlayer.updatePosition();
-               currentPlayer.draw(context);
-            }
-         }
-
-      };
-      update();
-
-      setTimeout(() => {
-         requestAnimationFrame(() => game_loop(context, currentPlayer));
-         
-      }, 1000 / 60);
-
-   };
-   function handleClick() {
-      socket.emit('ping');
+   function handleChange(event) {
+      setName(event.target.value);
+      console.log(name);
    }
+
+
+   function handleClick() {
+      if (name != "") {
+         if (name.length > 3 && name.length < 10) {
+            socket.emit('newPlayer', name);
+            document.getElementById("username").style.display = "none";
+         }else{
+            alert("Nome muito curto");
+         }
+      }else{
+         alert("Nome inválido");
+      }
+   }
+   function handleExit() {
+      socket.emit('exit', name);
+   }
+   function handleMessageChange(event) {
+      setMessage(event.target.value);
+   }
+   function handleSendMessage(e) {
+      e.preventDefault();
+      socket.emit('message', message, name);
+      // set value to empty
+      console.log(message)
+      document.getElementById("chat").value = "";  
+   }
+   
    
    return (
       
       <div className="App">
-         <header className="App-header">
+         <header className="App-header" z-index="15000   ">
             <h1>Game</h1>
+            
+            <div>
+               <label>Digite um nome </label><br/>
+               <input id="username" type='text' maxLength={12} placeholder='username' onChange={handleChange}></input><br/>
+               <button type='submit' onClick={handleClick}>Fazer Login</button>
+            </div>
             <div id="root">
-               <button type="click" onClick={handleClick}>Ping</button>
-               <Canvas draw={game_loop} height={576} width={832} />
-               {/* <canvas id="canvas" ref={canvasRef} width="832" height="576"></canvas> */}
                <div id="chat-div">
                     <ul id="chat-list"></ul>
                     <form id="chat-form">
-                        <input type="text" id="chat" autoComplete="off"/>
-                        <button type="submit" id="submit">Send</button>
-                        <button type="button" id="btnSair" >Sair</button>
+                        <input type="text" id="chat" autoComplete="off" onChange={handleMessageChange}/>
+                        <button type="click" id="submit" onClick={handleSendMessage}>Send</button>
+                        <button type="submit" id="btnSair" onClick={handleExit} >Sair</button>
                     </form>
                 </div>
-            </div> 
+            </div>
          </header>
       </div>
+      
    );
 }
-export default App;  
+export default App; 
