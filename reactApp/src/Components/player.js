@@ -1,15 +1,12 @@
+import { Vector3 } from "three";
 
 class Player {
     // socket.id , username, 
-    constructor(id, username, position) {
+    constructor(id, username) {
         this.id = id;
         this.username = username;
-        this.position = position;
-        this.velocity = (0, 0, 0);
-    }
-    // draw player model
-    drawPlayer() {
-        // draw player model
+        this.position = new Vector3(0,1,0);
+        this.velocity = new Vector3(0, 0, 0);
     }
     // update player model
     update() {
@@ -17,6 +14,10 @@ class Player {
         this.position.x = playerBody.position.x;
         this.position.y = playerBody.position.y;
         this.position.z = playerBody.position.z;
+    }
+    draw() {
+        // draw player model
+        console.log('desenhou');
     }
     move(direction) {
         direction = direction.toLowerCase();

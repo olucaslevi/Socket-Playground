@@ -9,7 +9,7 @@ module.exports = {
    },  
    devServer: {
     static: path.resolve(__dirname, 'dist'),
-    port: 9000
+    port: 3001
 },
    module: {  
       rules: [  
